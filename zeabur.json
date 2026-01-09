@@ -1,0 +1,18 @@
+{
+  "name": "paddleocr-api",
+  "type": "dockerfile",
+  "dockerfile": "Dockerfile",
+  "port": 8000,
+  "env": {
+    "FLAGS_enable_ir_optim": "0",
+    "PYTHONUNBUFFERED": "1"
+  },
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile"
+  },
+  "resources": {
+    "memory": "2Gi",
+    "cpu": "1000m"
+  }
+}

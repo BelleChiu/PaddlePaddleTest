@@ -2,34 +2,32 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
+# 設置環境變數
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV FLAGS_enable_ir_optim=0
+ENV PORT=8000
+
+# 安裝系統依賴
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
     libgomp1 \
     ca-certificates \
-    curl \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
+# 複製需求文件
 COPY requirements.txt .
 
-# 1) 從 noavx stable.html 抓出「符合 cp310 的 wheel 連結」
-# 2) 直接用該 wheel URL 安裝 paddlepaddle（不走 PyPI）
-RUN set -eux; \
-    HTML_URL="https://www.paddlepaddle.org.cn/whl/linux/cpu/noavx/stable.html"; \
-    WHEEL_URL="$(curl -fsSL "$HTML_URL" \
-      | grep -oE 'https?://[^"]+paddlepaddle-[0-9.]+-cp310-cp310-[^"]+\.whl' \
-      | head -n 1)"; \
-    echo "Selected wheel: $WHEEL_URL"; \
-    test -n "$WHEEL_URL"; \
-    pip install --no-cache-dir --no-deps "$WHEEL_URL"
+# 升級 pip 並安裝 Python 依賴
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# 安裝其餘套件（paddleocr / fastapi / uvicorn 等）
-RUN pip install --no-cache-dir -r requirements.txt
-
+# 複製應用程式碼
 COPY app.py .
 
-# 保險：關掉 IR optimizer（避免 SelfAttentionFusePass SIGILL）
-ENV FLAGS_enable_ir_optim=0
-ENV PORT=8000
+# 暴露端口
+EXPOSE $PORT
 
-CMD ["sh", "-c", "python -m uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# 啟動命令
+CMD ["sh", "-c", "python -m uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
